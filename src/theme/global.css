@@ -1,0 +1,125 @@
+/* ============================================================
+   MediCore HMS — Design Tokens
+   Typography rule (per spec): exactly 4 font sizes, used everywhere.
+   Chosen for all-day, on-screen clinical reading — never below 13px.
+   ============================================================ */
+
+:root {
+  /* ---- Typography scale (ONLY these 4 sizes are used anywhere in the app) ---- */
+  --font-xs: 13px;   /* table meta, timestamps, helper text, badges */
+  --font-base: 15px; /* body text, form fields, table cells, buttons */
+  --font-lg: 19px;   /* card titles, section headings */
+  --font-xl: 25px;   /* page titles */
+
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- Color palette: calm clinical teal + neutral surfaces ---- */
+  --color-primary: #0f766e;
+  --color-primary-dark: #0b5c56;
+  --color-primary-light: #e6f4f3;
+  --color-accent: #2563eb;
+  --color-danger: #dc2626;
+  --color-danger-light: #fef2f2;
+  --color-warning: #d97706;
+  --color-warning-light: #fffbeb;
+  --color-success: #16a34a;
+  --color-success-light: #f0fdf4;
+
+  --sidebar-bg: #0b2e33;
+  --sidebar-bg-hover: #123f45;
+  --sidebar-text: #d7e7e6;
+  --sidebar-text-active: #ffffff;
+
+  --surface: #ffffff;
+  --background: #f4f6f8;
+  --border: #e2e8f0;
+  --text-primary: #1a2027;
+  --text-secondary: #5b6672;
+  --text-muted: #8993a0;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 4px 10px rgba(16, 24, 40, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-base);
+  font-weight: var(--weight-regular);
+  color: var(--text-primary);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: var(--font-family);
+  font-size: var(--font-base);
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: var(--font-family);
+  font-size: var(--font-base);
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c3cdd6;
+  border-radius: 8px;
+}
+
+/* ---- Reusable typography classes (use these instead of ad-hoc font-sizes) ---- */
+.text-page-title { font-size: var(--font-xl); font-weight: var(--weight-bold); color: var(--text-primary); }
+.text-section-title { font-size: var(--font-lg); font-weight: var(--weight-semibold); color: var(--text-primary); }
+.text-body { font-size: var(--font-base); font-weight: var(--weight-regular); color: var(--text-primary); }
+.text-meta { font-size: var(--font-xs); font-weight: var(--weight-regular); color: var(--text-secondary); }
+
+/* ---- Toast ---- */
+.page-toast {
+  background: var(--color-success-light);
+  color: var(--color-success);
+  border: 1px solid #bbf0d0;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-base);
+  margin-bottom: 14px;
+}
+
+/* ---- Focus visibility (accessibility) ---- */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
