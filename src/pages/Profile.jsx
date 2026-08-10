@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import './Appointments.css';
+
 
 export default function Profile() {
   const { user, refreshProfile } = useAuth();

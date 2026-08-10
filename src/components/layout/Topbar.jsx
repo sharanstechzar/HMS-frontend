@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import './Topbar.css';
 
 const ROLE_LABELS = {
   super_admin: 'Super Admin',
@@ -18,7 +17,7 @@ const ROLE_LABELS = {
   patient: 'Patient',
 };
 
-export default function Topbar({ title }) {
+export default function Topbar({ title, onMenuClick }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -29,23 +28,30 @@ export default function Topbar({ title }) {
   };
 
   return (
-    <header className="topbar">
-      <h1 className="text-page-title">{title}</h1>
+    <header className="h-[68px] min-h-[68px] bg-surface border-b border-border flex items-center justify-between px-4 md:px-7 sticky top-0 z-10">
+      <div className="flex items-center gap-3">
+        <button className="md:hidden text-slate-600 hover:text-slate-900" onClick={onMenuClick}>
+          <Menu size={24} />
+        </button>
+        <h1 className="text-[20px] md:text-[25px] font-bold text-slate-900 truncate">{title}</h1>
+      </div>
 
-      <div className="topbar-user" onClick={() => setOpen((o) => !o)}>
-        <div className="topbar-avatar">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-        <div className="topbar-userinfo">
-          <span className="text-body" style={{ fontWeight: 600 }}>{user?.name}</span>
-          <span className="text-meta">{ROLE_LABELS[user?.role] || user?.role}</span>
+      <div className="flex items-center gap-2.5 cursor-pointer relative p-1.5 px-2.5 rounded-md hover:bg-background" onClick={() => setOpen((o) => !o)}>
+        <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-[15px]">
+          {user?.name?.charAt(0)?.toUpperCase() || 'U'}
         </div>
-        <ChevronDown size={16} />
+        <div className="hidden md:flex flex-col leading-tight">
+          <span className="text-[15px] text-slate-800 font-semibold">{user?.name}</span>
+          <span className="text-[13px] text-slate-500">{ROLE_LABELS[user?.role] || user?.role}</span>
+        </div>
+        <ChevronDown size={16} className="text-slate-500" />
 
         {open && (
-          <div className="topbar-menu" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => navigate('/settings')}>
+          <div className="absolute top-[52px] right-0 bg-surface border border-border rounded-md shadow-md min-w-[200px] overflow-hidden z-20" onClick={(e) => e.stopPropagation()}>
+            <button className="flex items-center gap-2.5 w-full p-3 px-4 bg-transparent border-none text-left text-[15px] text-slate-900 hover:bg-background" onClick={() => navigate('/settings')}>
               <User size={16} /> Profile & Settings
             </button>
-            <button onClick={handleLogout} className="danger">
+            <button className="flex items-center gap-2.5 w-full p-3 px-4 bg-transparent border-none text-left text-[15px] text-red-600 hover:bg-red-50" onClick={handleLogout}>
               <LogOut size={16} /> Logout
             </button>
           </div>

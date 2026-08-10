@@ -3,6 +3,7 @@ import {
   BedDouble, Siren, FileHeart, Pill, FlaskConical, ScanLine, HeartPulse,
   BedSingle, Receipt, ShieldCheck, Scissors, Droplet, Truck, UserCog,
   Boxes, Wallet, BarChart3, BellRing, FolderOpen, Settings as SettingsIcon,
+  Activity, Tent, Droplets
 } from 'lucide-react';
 
 // Role groups mirrored from backend/src/config/roleGroups.js
@@ -18,14 +19,9 @@ export const PHARMACY = ['super_admin', 'hospital_admin', 'pharmacist'];
 export const LAB = ['super_admin', 'hospital_admin', 'lab_technician', 'doctor'];
 export const RADIOLOGY = ['super_admin', 'hospital_admin', 'radiologist', 'doctor'];
 export const EVERYONE = [...ALL_STAFF, 'patient'];
-export const EXPORT_ROLES = ADMIN; // only Super Admin & Hospital Admin can export data (requirement #7)
-export const ROLES = EVERYONE; // full list of the 11 system roles, used by Settings > Create Staff Account
+export const EXPORT_ROLES = ADMIN;
+export const ROLES = EVERYONE;
 
-/**
- * Every module in the sidebar. `endpoint` maps to the backend REST route.
- * `fields` describes the generic form/table for modules that don't have
- * a hand-built specialized page.
- */
 export const MODULES = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/', roles: EVERYONE },
 
@@ -44,6 +40,8 @@ export const MODULES = [
 
   { key: 'doctors', label: 'Doctors', icon: Stethoscope, path: '/doctors', endpoint: '/doctors', roles: ALL_STAFF,
     fields: [
+      { name: 'user', label: 'User Account', type: 'reference', refEndpoint: '/users', refLabel: 'name', required: true },
+      { name: 'department', label: 'Department', type: 'reference', refEndpoint: '/departments', refLabel: 'name', required: true },
       { name: 'qualification', label: 'Qualification', type: 'text', required: true },
       { name: 'specialization', label: 'Specialization', type: 'text', required: true },
       { name: 'experienceYears', label: 'Experience (years)', type: 'number' },
@@ -67,6 +65,8 @@ export const MODULES = [
 
   { key: 'opd', label: 'OPD', icon: ClipboardList, path: '/opd', endpoint: '/opd-visits', roles: ALL_STAFF,
     fields: [
+      { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
+      { name: 'doctor', label: 'Doctor', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization', required: true },
       { name: 'symptoms', label: 'Symptoms', type: 'textarea' },
       { name: 'diagnosis', label: 'Diagnosis', type: 'textarea' },
       { name: 'doctorNotes', label: "Doctor's Notes", type: 'textarea' },
@@ -81,8 +81,11 @@ export const MODULES = [
 
   { key: 'emergency', label: 'Emergency', icon: Siren, path: '/emergency', endpoint: '/emergency', roles: ALL_STAFF,
     fields: [
+      { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
       { name: 'triageLevel', label: 'Triage Level', type: 'select', options: ['critical', 'urgent', 'stable'], required: true },
       { name: 'arrivalMode', label: 'Arrival Mode', type: 'select', options: ['ambulance', 'walk_in', 'referred'] },
+      { name: 'ambulance', label: 'Ambulance', type: 'reference', refEndpoint: '/ambulances', refLabel: 'vehicleNumber' },
+      { name: 'attendingDoctor', label: 'Attending Doctor', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization' },
       { name: 'immediateTreatment', label: 'Immediate Treatment', type: 'textarea' },
       { name: 'status', label: 'Status', type: 'select', options: ['in_treatment', 'stabilized', 'admitted', 'discharged', 'deceased'] },
     ],
@@ -96,7 +99,9 @@ export const MODULES = [
 
   { key: 'laboratory', label: 'Laboratory', icon: FlaskConical, path: '/laboratory', endpoint: '/lab-orders', roles: ALL_STAFF,
     fields: [
-      { name: 'test', label: 'Test ID', type: 'text', required: true, hint: 'Lab test reference id' },
+      { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
+      { name: 'doctor', label: 'Doctor', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization' },
+      { name: 'test', label: 'Lab Test', type: 'reference', refEndpoint: '/lab-tests', refLabel: 'name', required: true },
       { name: 'result', label: 'Result', type: 'textarea' },
       { name: 'status', label: 'Status', type: 'select', options: ['ordered', 'sample_collected', 'result_ready', 'delivered'] },
     ],
@@ -106,6 +111,8 @@ export const MODULES = [
 
   { key: 'radiology', label: 'Radiology', icon: ScanLine, path: '/radiology', endpoint: '/radiology-orders', roles: ALL_STAFF,
     fields: [
+      { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
+      { name: 'doctor', label: 'Doctor', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization' },
       { name: 'type', label: 'Scan Type', type: 'select', options: ['X-Ray', 'CT Scan', 'MRI', 'Ultrasound', 'ECG'], required: true },
       { name: 'notes', label: 'Notes', type: 'textarea' },
       { name: 'status', label: 'Status', type: 'select', options: ['ordered', 'in_progress', 'report_ready'] },
@@ -119,6 +126,7 @@ export const MODULES = [
   { key: 'beds', label: 'Bed Management', icon: BedSingle, path: '/beds', endpoint: '/beds', roles: ALL_STAFF,
     fields: [
       { name: 'bedNumber', label: 'Bed Number', type: 'text', required: true },
+      { name: 'ward', label: 'Ward', type: 'reference', refEndpoint: '/wards', refLabel: 'name' },
       { name: 'status', label: 'Status', type: 'select', options: ['available', 'occupied', 'cleaning', 'maintenance'] },
       { name: 'dailyCharge', label: 'Daily Charge', type: 'number' },
     ],
@@ -130,6 +138,7 @@ export const MODULES = [
 
   { key: 'insurance', label: 'Insurance', icon: ShieldCheck, path: '/insurance', endpoint: '/insurance-claims', roles: ALL_STAFF,
     fields: [
+      { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
       { name: 'insuranceCompany', label: 'Insurance Company', type: 'text', required: true },
       { name: 'policyNumber', label: 'Policy Number', type: 'text', required: true },
       { name: 'claimAmount', label: 'Claim Amount', type: 'number', required: true },
@@ -142,6 +151,8 @@ export const MODULES = [
 
   { key: 'surgery', label: 'Surgery', icon: Scissors, path: '/surgery', endpoint: '/surgeries', roles: ALL_STAFF,
     fields: [
+      { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
+      { name: 'surgeon', label: 'Surgeon', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization', required: true },
       { name: 'surgeryType', label: 'Surgery Type', type: 'text', required: true },
       { name: 'scheduledDate', label: 'Scheduled Date', type: 'date', required: true },
       { name: 'operationTheatre', label: 'Operation Theatre', type: 'text' },
@@ -200,6 +211,62 @@ export const MODULES = [
     columns: ['type', 'category', 'amount', 'date'],
     writeRoles: BILLING,
   },
+
+  // === NEW MODULES ADDED FOR SYNCHRONIZATION ===
+
+  { key: 'wards', label: 'Wards', icon: Tent, path: '/wards', endpoint: '/wards', roles: ALL_STAFF,
+    fields: [
+      { name: 'name', label: 'Ward Name', type: 'text', required: true },
+      { name: 'department', label: 'Department', type: 'reference', refEndpoint: '/departments', refLabel: 'name' },
+      { name: 'type', label: 'Ward Type', type: 'select', options: ['general', 'private', 'icu', 'maternity', 'pediatric'] },
+      { name: 'capacity', label: 'Capacity', type: 'number', required: true },
+    ],
+    columns: ['name', 'type', 'capacity'],
+    writeRoles: ADMIN,
+  },
+
+  { key: 'lab-tests', label: 'Lab Tests Catalog', icon: FlaskConical, path: '/lab-tests', endpoint: '/lab-tests', roles: LAB,
+    fields: [
+      { name: 'name', label: 'Test Name', type: 'text', required: true },
+      { name: 'category', label: 'Category', type: 'select', options: ['hematology', 'biochemistry', 'microbiology', 'pathology', 'immunology'] },
+      { name: 'cost', label: 'Cost', type: 'number', required: true },
+      { name: 'turnaroundTime', label: 'Turnaround Time (hrs)', type: 'number' },
+    ],
+    columns: ['name', 'category', 'cost'],
+    writeRoles: ADMIN,
+  },
+
+  { key: 'blood-requests', label: 'Blood Requests', icon: Droplets, path: '/blood-requests', endpoint: '/blood-requests', roles: CLINICAL,
+    fields: [
+      { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
+      { name: 'requestedBy', label: 'Requested By (Doctor)', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization' },
+      { name: 'bloodGroup', label: 'Blood Group', type: 'select', options: ['A+','A-','B+','B-','AB+','AB-','O+','O-'], required: true },
+      { name: 'units', label: 'Units Needed', type: 'number', required: true },
+      { name: 'urgency', label: 'Urgency', type: 'select', options: ['routine', 'urgent', 'emergency'] },
+      { name: 'status', label: 'Status', type: 'select', options: ['pending', 'approved', 'fulfilled', 'rejected'] },
+    ],
+    columns: ['bloodGroup', 'units', 'urgency', 'status'],
+    writeRoles: CLINICAL,
+  },
+
+  { key: 'users', label: 'User Accounts', icon: Users, path: '/users', endpoint: '/users', roles: ADMIN,
+    fields: [
+      { name: 'name', label: 'Name', type: 'text', required: true },
+      { name: 'email', label: 'Email', type: 'text', required: true },
+      { name: 'role', label: 'Role', type: 'select', options: ['super_admin', 'hospital_admin', 'doctor', 'nurse', 'receptionist', 'pharmacist', 'lab_technician', 'radiologist', 'accountant', 'cashier', 'patient'], required: true },
+      { name: 'password', label: 'Password', type: 'text', hint: 'Leave blank to keep existing password' },
+    ],
+    columns: ['name', 'email', 'role'],
+    writeRoles: ADMIN,
+  },
+
+  { key: 'activity-logs', label: 'Activity Logs', icon: Activity, path: '/activity-logs', endpoint: '/activity-logs', roles: ADMIN,
+    fields: [], // Typically read-only
+    columns: ['action', 'module', 'details', 'createdAt'],
+    writeRoles: [], // No one can write logs via UI
+  },
+
+  // ===========================================
 
   { key: 'reports', label: 'Reports', icon: BarChart3, path: '/reports', roles: ADMIN, special: true },
 
