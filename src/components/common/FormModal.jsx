@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus, Trash2 } from 'lucide-react';
 import api from '../../api/axios';
 
 export default function FormModal({ title, fields, initialData, onClose, onSubmit, submitLabel = 'Save' }) {
@@ -7,6 +7,7 @@ export default function FormModal({ title, fields, initialData, onClose, onSubmi
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [refOptions, setRefOptions] = useState({});
+  const [doctorDept, setDoctorDept] = useState({}); // per-field selected department, for type:'doctor' fields only
 
   useEffect(() => {
     const fetchReferences = async () => {
@@ -14,12 +15,24 @@ export default function FormModal({ title, fields, initialData, onClose, onSubmi
       for (const f of fields) {
         if (f.type === 'reference' && f.refEndpoint) {
           try {
-            const res = await api.get(f.refEndpoint);
+            const res = await api.get(f.refEndpoint, f.refParams ? { params: f.refParams } : undefined);
             // Assuming standard response wraps in "data" or is the array itself
             options[f.name] = res.data.data || res.data || [];
           } catch (err) {
             console.error(`Failed to load reference for ${f.name}`, err);
             options[f.name] = [];
+          }
+        }
+        if (f.type === 'doctor') {
+          try {
+            const [deptRes, docRes] = await Promise.all([
+              api.get('/departments'),
+              api.get('/doctors', { params: { limit: 500 } }),
+            ]);
+            options[f.name] = { departments: deptRes.data.data || [], doctors: docRes.data.data || [] };
+          } catch (err) {
+            console.error(`Failed to load doctors for ${f.name}`, err);
+            options[f.name] = { departments: [], doctors: [] };
           }
         }
       }
@@ -31,10 +44,25 @@ export default function FormModal({ title, fields, initialData, onClose, onSubmi
   useEffect(() => {
     const initial = {};
     fields.forEach((f) => {
-      initial[f.name] = initialData?.[f.name] ?? (f.type === 'checkbox' ? false : '');
+      const emptyDefault = f.type === 'checkbox' ? false : f.type === 'array' || f.type === 'checkboxGroup' ? [] : '';
+      initial[f.name] = initialData?.[f.name] ?? emptyDefault;
     });
     setValues(initial);
   }, [initialData, fields]);
+
+  // When editing an existing record, derive which department each
+  // type:'doctor' field's doctor belongs to, so both selects start populated.
+  useEffect(() => {
+    const deptByField = {};
+    fields.forEach((f) => {
+      if (f.type !== 'doctor') return;
+      const current = initialData?.[f.name];
+      const doctorId = current?._id || current;
+      const match = (refOptions[f.name]?.doctors || []).find((d) => d._id === doctorId);
+      if (match) deptByField[f.name] = match.department?._id || match.department || '';
+    });
+    if (Object.keys(deptByField).length) setDoctorDept((prev) => ({ ...prev, ...deptByField }));
+  }, [initialData, fields, refOptions]);
 
   const handleChange = (name, value) => {
     setValues((v) => ({ ...v, [name]: value }));
@@ -117,6 +145,43 @@ export default function FormModal({ title, fields, initialData, onClose, onSubmi
                   </select>
                 )}
 
+                {f.type === 'doctor' && (
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <select
+                      className="p-2.5 px-3 border border-border rounded-md text-[14px] text-slate-900 bg-surface w-full focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                      value={doctorDept[f.name] || ''}
+                      onChange={(e) => {
+                        setDoctorDept((prev) => ({ ...prev, [f.name]: e.target.value }));
+                        handleChange(f.name, ''); // previously picked doctor may not belong to the new department
+                      }}
+                    >
+                      <option value="">Department...</option>
+                      {(refOptions[f.name]?.departments || []).map((d) => (
+                        <option key={d._id} value={d._id}>{d.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="p-2.5 px-3 border border-border rounded-md text-[14px] text-slate-900 bg-surface w-full focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400"
+                      value={values[f.name]?._id || values[f.name] || ''}
+                      onChange={(e) => handleChange(f.name, e.target.value)}
+                      disabled={!doctorDept[f.name]}
+                    >
+                      <option value="">
+                        {!doctorDept[f.name]
+                          ? 'Select department first'
+                          : (refOptions[f.name]?.doctors || []).some((d) => (d.department?._id || d.department) === doctorDept[f.name])
+                            ? 'Doctor...'
+                            : 'No doctors in this department'}
+                      </option>
+                      {(refOptions[f.name]?.doctors || [])
+                        .filter((d) => (d.department?._id || d.department) === doctorDept[f.name])
+                        .map((d) => (
+                          <option key={d._id} value={d._id}>Dr. {d.user?.name}</option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
                 {f.type === 'checkbox' && (
                   <input
                     type="checkbox"
@@ -124,6 +189,80 @@ export default function FormModal({ title, fields, initialData, onClose, onSubmi
                     checked={!!values[f.name]}
                     onChange={(e) => handleChange(f.name, e.target.checked)}
                   />
+                )}
+
+                {f.type === 'time' && (
+                  <input
+                    type="time"
+                    className="p-2.5 px-3 border border-border rounded-md text-[15px] text-slate-900 bg-surface w-full focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                    value={values[f.name] || ''}
+                    onChange={(e) => handleChange(f.name, e.target.value)}
+                  />
+                )}
+
+                {f.type === 'checkboxGroup' && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {f.options.map((opt) => {
+                      const selected = (values[f.name] || []).includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            const current = values[f.name] || [];
+                            handleChange(f.name, selected ? current.filter((o) => o !== opt) : [...current, opt]);
+                          }}
+                          className={`px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors ${
+                            selected ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-border hover:bg-slate-50'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {f.type === 'array' && (
+                  <div className="flex flex-col gap-2">
+                    {(values[f.name] || []).map((item, idx) => (
+                      <div key={idx} className="flex items-end gap-2 p-2.5 border border-border rounded-md bg-slate-50/50">
+                        {f.itemFields.map((itemField) => (
+                          <div key={itemField.name} className="flex flex-col gap-1 flex-1">
+                            <label className="text-[11px] font-medium text-slate-500">{itemField.label}</label>
+                            <input
+                              type={itemField.type === 'date' ? 'date' : 'text'}
+                              className="p-2 px-2.5 border border-border rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+                              value={item[itemField.name] ? (itemField.type === 'date' ? String(item[itemField.name]).slice(0, 10) : item[itemField.name]) : ''}
+                              onChange={(e) => {
+                                const arr = [...(values[f.name] || [])];
+                                arr[idx] = { ...arr[idx], [itemField.name]: e.target.value };
+                                handleChange(f.name, arr);
+                              }}
+                            />
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="icon-btn danger"
+                          onClick={() => handleChange(f.name, (values[f.name] || []).filter((_, i) => i !== idx))}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-secondary self-start"
+                      onClick={() => {
+                        const blank = {};
+                        f.itemFields.forEach((itemField) => (blank[itemField.name] = ''));
+                        handleChange(f.name, [...(values[f.name] || []), blank]);
+                      }}
+                    >
+                      <Plus size={14} /> Add {f.label.replace(/s$/, '')}
+                    </button>
+                  </div>
                 )}
 
                 {['text', 'number', 'date'].includes(f.type) && (

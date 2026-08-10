@@ -24,6 +24,7 @@ export default function DataTable({
   loading,
   emptyLabel = 'No records yet',
   extraActions,
+  renderRowActions,
 }) {
   return (
     <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
@@ -59,7 +60,7 @@ export default function DataTable({
               {columns.map((c) => (
                 <th key={c.key} className="p-3.5 px-4 font-semibold text-[13px] uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-border whitespace-nowrap">{c.label}</th>
               ))}
-              {(onEdit || onDelete) && <th className="p-3.5 px-4 font-semibold text-[13px] uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-border w-[100px] text-right whitespace-nowrap">Actions</th>}
+              {(onEdit || onDelete || renderRowActions) && <th className="p-3.5 px-4 font-semibold text-[13px] uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-border w-[100px] text-right whitespace-nowrap">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -74,9 +75,10 @@ export default function DataTable({
                 {columns.map((c) => (
                   <td key={c.key} className="p-3.5 px-4 text-[15px] text-slate-800 whitespace-nowrap">{c.render ? c.render(row) : formatCell(row[c.key])}</td>
                 ))}
-                {(onEdit || onDelete) && (
+                {(onEdit || onDelete || renderRowActions) && (
                   <td className="p-3.5 px-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
+                      {renderRowActions && renderRowActions(row)}
                       {onEdit && canWrite && (
                         <button className="icon-btn" onClick={() => onEdit(row)} title="Edit">
                           <Pencil size={16} />

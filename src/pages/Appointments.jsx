@@ -3,6 +3,7 @@ import { Plus, Search, X } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { FRONT_DESK } from '../config/modules';
+import DepartmentDoctorSelect from '../components/common/DepartmentDoctorSelect';
 
 const STATUS_TONE = {
   booked: 'bg-teal-50 text-teal-700 border-teal-200',
@@ -25,14 +26,17 @@ export default function Appointments() {
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().slice(0, 10));
-  const [form, setForm] = useState({ patient: '', doctor: '', date: '', timeSlot: '', reason: '' });
+  const [form, setForm] = useState({ patient: '', department: '', doctor: '', date: '', timeSlot: '', reason: '' });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
   const canBook = FRONT_DESK.includes(user.role);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const nowTimeStr = new Date().toTimeString().slice(0, 5);
 
   const loadAppointments = async (date) => {
     setLoading(true);
@@ -49,6 +53,7 @@ export default function Appointments() {
   useEffect(() => {
     api.get('/patients', { params: { limit: 200 } }).then((r) => setPatients(r.data.data));
     api.get('/doctors', { params: { limit: 200 } }).then((r) => setDoctors(r.data.data));
+    api.get('/departments', { params: { limit: 100 } }).then((r) => setDepartments(r.data.data));
   }, []);
 
   const handleBook = async (e) => {
@@ -56,9 +61,10 @@ export default function Appointments() {
     setErr('');
     setSaving(true);
     try {
-      await api.post('/appointments', { ...form, date: form.date || dateFilter });
+      const { department, ...payload } = form; // department is a client-side filter only; backend derives it from the doctor
+      await api.post('/appointments', { ...payload, date: form.date || dateFilter });
       setModalOpen(false);
-      setForm({ patient: '', doctor: '', date: '', timeSlot: '', reason: '' });
+      setForm({ patient: '', department: '', doctor: '', date: '', timeSlot: '', reason: '' });
       loadAppointments(dateFilter);
     } catch (error) {
       setErr(error.response?.data?.message || 'Booking failed');
@@ -153,22 +159,38 @@ export default function Appointments() {
                   </select>
                 </div>
                 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-semibold text-slate-500">Doctor <span className="text-red-600">*</span></label>
-                  <select className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none" required value={form.doctor} onChange={(e) => setForm({ ...form, doctor: e.target.value })}>
-                    <option value="">Select doctor...</option>
-                    {doctors.map((d) => <option key={d._id} value={d._id}>Dr. {d.user?.name} — {d.specialization}</option>)}
-                  </select>
-                </div>
-                
+                <DepartmentDoctorSelect
+                  departments={departments}
+                  doctors={doctors}
+                  department={form.department}
+                  doctor={form.doctor}
+                  onDepartmentChange={(v) => setForm({ ...form, department: v, doctor: '' })}
+                  onDoctorChange={(v) => setForm({ ...form, doctor: v })}
+                  required
+                />
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[13px] font-semibold text-slate-500">Date <span className="text-red-600">*</span></label>
-                    <input className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none" type="date" required value={form.date || dateFilter} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                    <input
+                      className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none"
+                      type="date"
+                      required
+                      min={todayStr}
+                      value={form.date || dateFilter}
+                      onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-semibold text-slate-500">Time Slot <span className="text-red-600">*</span></label>
-                    <input className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none" type="text" required placeholder="e.g. 10:30 AM" value={form.timeSlot} onChange={(e) => setForm({ ...form, timeSlot: e.target.value })} />
+                    <label className="text-[13px] font-semibold text-slate-500">Time <span className="text-red-600">*</span></label>
+                    <input
+                      className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none"
+                      type="time"
+                      required
+                      min={(form.date || dateFilter) === todayStr ? nowTimeStr : undefined}
+                      value={form.timeSlot}
+                      onChange={(e) => setForm({ ...form, timeSlot: e.target.value })}
+                    />
                   </div>
                 </div>
                 

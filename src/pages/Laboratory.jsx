@@ -1,36 +1,36 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Plus, Search, FileDown, TableProperties } from 'lucide-react';
+import { FlaskConical, Plus, Search, FileDown } from 'lucide-react';
 import DataTable from '../components/common/DataTable';
 import FormModal from '../components/common/FormModal';
 import useCrud from '../hooks/useCrud';
-import { getModuleByPath, EXPORT_ROLES } from '../config/modules';
 import { useAuth } from '../context/AuthContext';
+import { LAB, EXPORT_ROLES } from '../config/modules';
 
-export default function ModulePage() {
-  const location = useLocation();
-  const mod = getModuleByPath(location.pathname);
+export default function Laboratory() {
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [toast, setToast] = useState('');
 
-  const { rows, loading, error, create, update, remove, exportCsv } = useCrud(mod.endpoint, { search });
+  const endpoint = '/lab-orders';
+  const { rows, loading, error, create, update, remove, exportCsv } = useCrud(endpoint, { search });
 
-  const canWrite = (mod.writeRoles || mod.roles).includes(user.role);
+  const canWrite = LAB.includes(user.role);
   const canExport = EXPORT_ROLES.includes(user.role);
 
-  // mod.columns entries can be a plain field-name string (label/rendering
-  // derived automatically) or a {key, label, render} object for columns that
-  // need a custom label or need to pull from a populated/nested field.
-  const columns = (mod.columns || mod.fields.map((f) => f.name)).map((col) => {
-    const key = typeof col === 'string' ? col : col.key;
-    const fieldDef = mod.fields.find((f) => f.name === key);
-    const label = (typeof col === 'object' && col.label) || fieldDef?.label || key.charAt(0).toUpperCase() + key.slice(1);
-    const render = typeof col === 'object' ? col.render : undefined;
-    return { key, label, render };
-  });
+  const fields = [
+    { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
+    { name: 'doctor', label: 'Doctor', type: 'doctor' },
+    { name: 'test', label: 'Lab Test', type: 'reference', refEndpoint: '/lab-tests', refLabel: 'name', required: true },
+    { name: 'result', label: 'Result', type: 'textarea' },
+    { name: 'status', label: 'Status', type: 'select', options: ['ordered', 'sample_collected', 'result_ready', 'delivered'] },
+  ];
+
+  const columns = [
+    { key: 'status', label: 'Status' },
+    { key: 'orderedAt', label: 'Ordered At' },
+  ];
 
   const handleAdd = () => { setEditing(null); setModalOpen(true); };
   const handleEdit = (row) => { setEditing(row); setModalOpen(true); };
@@ -39,10 +39,10 @@ export default function ModulePage() {
     try {
       if (editing) {
         await update(editing._id, values);
-        setToast(`${mod.label.replace(/s$/, '')} updated successfully`);
+        setToast('Lab order updated successfully');
       } else {
         await create(values);
-        setToast(`${mod.label.replace(/s$/, '')} added successfully`);
+        setToast('Lab order added successfully');
       }
       setModalOpen(false);
       setTimeout(() => setToast(''), 2500);
@@ -52,15 +52,13 @@ export default function ModulePage() {
   };
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Are you sure you want to delete this ${mod.label.replace(/s$/, '').toLowerCase()}?`)) return;
+    if (!window.confirm('Are you sure you want to delete this record?')) return;
     try {
       await remove(row._id);
     } catch (err) {
       alert(err.response?.data?.message || 'Delete failed');
     }
   };
-
-  const Icon = mod.icon || TableProperties;
 
   return (
     <div className="flex flex-col h-full bg-slate-50 p-6 md:p-8">
@@ -80,12 +78,12 @@ export default function ModulePage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-3">
-            <div className="p-2.5 bg-slate-200 text-slate-700 rounded-xl">
-              <Icon size={26} strokeWidth={2.5} />
+            <div className="p-2.5 bg-amber-100 text-amber-700 rounded-xl">
+              <FlaskConical size={26} strokeWidth={2.5} />
             </div>
-            {mod.label} Catalog
+            Laboratory Orders
           </h1>
-          <p className="text-slate-500 mt-2 font-medium">Manage and review {mod.label.toLowerCase()} records.</p>
+          <p className="text-slate-500 mt-2 font-medium">Manage pending tests, sample collection, and results.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -93,10 +91,10 @@ export default function ModulePage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input
               type="text"
-              placeholder={`Search ${mod.label.toLowerCase()}...`}
+              placeholder="Search orders..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all shadow-sm"
+              className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm"
             />
           </div>
           {canExport && (
@@ -106,9 +104,9 @@ export default function ModulePage() {
             </button>
           )}
           {canWrite && (
-            <button onClick={handleAdd} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-all shadow-md shadow-slate-500/20 font-medium">
+            <button onClick={handleAdd} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-all shadow-md shadow-amber-500/20 font-medium">
               <Plus size={20} />
-              New {mod.label.replace(/s$/, '')}
+              New Order
             </button>
           )}
         </div>
@@ -122,14 +120,14 @@ export default function ModulePage() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           canWrite={canWrite}
-          emptyLabel={`No ${mod.label.toLowerCase()} records yet. Click 'New ${mod.label.replace(/s$/, '')}' to create one.`}
+          emptyLabel="No lab orders found."
         />
       </div>
 
       {modalOpen && (
         <FormModal
-          title={editing ? `Update ${mod.label.replace(/s$/, '')}` : `New ${mod.label.replace(/s$/, '')}`}
-          fields={mod.fields}
+          title={editing ? "Update Lab Order" : "New Lab Order"}
+          fields={fields}
           initialData={editing}
           onClose={() => setModalOpen(false)}
           onSubmit={handleSubmit}

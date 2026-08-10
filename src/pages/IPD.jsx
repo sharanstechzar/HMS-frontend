@@ -3,6 +3,7 @@ import { Plus, LogOut, ClipboardPlus, X } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { CLINICAL } from '../config/modules';
+import DepartmentDoctorSelect from '../components/common/DepartmentDoctorSelect';
 
 const Badge = ({ children, tone = 'gray' }) => {
   const tones = {
@@ -24,6 +25,7 @@ export default function IPD() {
   const [admissions, setAdmissions] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [wards, setWards] = useState([]);
   const [beds, setBeds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,7 @@ export default function IPD() {
   const [noteText, setNoteText] = useState('');
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ patient: '', doctor: '', ward: '', bed: '', reason: '' });
+  const [form, setForm] = useState({ patient: '', department: '', doctor: '', ward: '', bed: '', reason: '' });
   const [statusFilter, setStatusFilter] = useState('admitted');
 
   const canManage = CLINICAL.includes(user.role);
@@ -52,6 +54,7 @@ export default function IPD() {
   useEffect(() => {
     api.get('/patients', { params: { limit: 200 } }).then((r) => setPatients(r.data.data));
     api.get('/doctors', { params: { limit: 200 } }).then((r) => setDoctors(r.data.data));
+    api.get('/departments', { params: { limit: 100 } }).then((r) => setDepartments(r.data.data));
     api.get('/wards', { params: { limit: 100 } }).then((r) => setWards(r.data.data));
   }, []);
 
@@ -69,9 +72,10 @@ export default function IPD() {
     setErr('');
     setSaving(true);
     try {
-      await api.post('/admissions', form);
+      const { department, ...payload } = form; // department is a client-side filter only, not part of the Admission model
+      await api.post('/admissions', payload);
       setModalOpen(false);
-      setForm({ patient: '', doctor: '', ward: '', bed: '', reason: '' });
+      setForm({ patient: '', department: '', doctor: '', ward: '', bed: '', reason: '' });
       loadAdmissions(statusFilter);
     } catch (error) {
       setErr(error.response?.data?.message || 'Admission failed');
@@ -176,14 +180,17 @@ export default function IPD() {
                   </select>
                 </div>
                 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-semibold text-slate-500">Attending Doctor *</label>
-                  <select className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none" required value={form.doctor} onChange={(e) => setForm({ ...form, doctor: e.target.value })}>
-                    <option value="">Select doctor...</option>
-                    {doctors.map((d) => <option key={d._id} value={d._id}>Dr. {d.user?.name}</option>)}
-                  </select>
-                </div>
-                
+                <DepartmentDoctorSelect
+                  departments={departments}
+                  doctors={doctors}
+                  department={form.department}
+                  doctor={form.doctor}
+                  onDepartmentChange={(v) => setForm({ ...form, department: v, doctor: '' })}
+                  onDoctorChange={(v) => setForm({ ...form, doctor: v })}
+                  labelDoctor="Attending Doctor"
+                  required
+                />
+
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[13px] font-semibold text-slate-500">Ward *</label>
                   <select className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none" required value={form.ward} onChange={(e) => setForm({ ...form, ward: e.target.value, bed: '' })}>

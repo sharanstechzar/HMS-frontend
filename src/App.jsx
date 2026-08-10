@@ -13,12 +13,21 @@ import Prescriptions from './pages/Prescriptions';
 import Staff from './pages/Staff';
 import Reports from './pages/Reports';
 import Documents from './pages/Documents';
-import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+
+// New standalone pages
+import Patients from './pages/Patients';
+import Opd from './pages/Opd';
+import Emergency from './pages/Emergency';
+import Surgery from './pages/Surgery';
+import Laboratory from './pages/Laboratory';
+import Radiology from './pages/Radiology';
+import UsersPage from './pages/Users';
+import RolesPermissions from './pages/RolesPermissions';
+
 import { MODULES, ADMIN } from './config/modules';
 
-// Standard (non-special) modules are rendered by the generic ModulePage,
-// driven entirely by the config in config/modules.js.
+// Standard (non-special) modules are rendered by the generic ModulePage
 const genericModules = MODULES.filter((m) => m.endpoint && !m.special);
 
 export default function App() {
@@ -44,9 +53,19 @@ export default function App() {
             <Route path="/staff" element={<Staff />} />
             <Route path="/reports" element={<ProtectedRoute allowedRoles={ADMIN}><Reports /></ProtectedRoute>} />
             <Route path="/documents" element={<Documents />} />
-            <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
 
+            {/* Newly extracted dedicated pages */}
+            <Route path="/patients" element={<Patients />} />
+            <Route path="/opd" element={<Opd />} />
+            <Route path="/emergency" element={<Emergency />} />
+            <Route path="/surgery" element={<Surgery />} />
+            <Route path="/laboratory" element={<Laboratory />} />
+            <Route path="/radiology" element={<Radiology />} />
+            <Route path="/users" element={<ProtectedRoute allowedRoles={ADMIN}><UsersPage /></ProtectedRoute>} />
+            <Route path="/roles" element={<ProtectedRoute allowedRoles={ADMIN}><RolesPermissions /></ProtectedRoute>} />
+
+            {/* Remaining generic lookup catalogs */}
             {genericModules.map((m) => (
               <Route key={m.key} path={m.path} element={<ModulePage />} />
             ))}

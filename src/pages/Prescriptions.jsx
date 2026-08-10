@@ -3,6 +3,7 @@ import { Plus, Trash2, X } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { CLINICAL } from '../config/modules';
+import DepartmentDoctorSelect from '../components/common/DepartmentDoctorSelect';
 
 const Badge = ({ children, tone = 'gray' }) => {
   const tones = {
@@ -24,9 +25,10 @@ export default function Prescriptions() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ patient: '', doctor: '', items: [] });
+  const [form, setForm] = useState({ patient: '', department: '', doctor: '', items: [] });
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -45,6 +47,7 @@ export default function Prescriptions() {
   useEffect(() => {
     api.get('/patients', { params: { limit: 200 } }).then((r) => setPatients(r.data.data));
     api.get('/doctors', { params: { limit: 200 } }).then((r) => setDoctors(r.data.data));
+    api.get('/departments', { params: { limit: 100 } }).then((r) => setDepartments(r.data.data));
   }, []);
 
   const addItem = () => setForm((f) => ({ ...f, items: [...f.items, { medicineName: '', dosage: '', frequency: '', duration: '', instructions: '' }] }));
@@ -60,9 +63,10 @@ export default function Prescriptions() {
     setErr('');
     setSaving(true);
     try {
-      await api.post('/prescriptions', form);
+      const { department, ...payload } = form; // department is a client-side filter only, not part of the Prescription model
+      await api.post('/prescriptions', payload);
       setModalOpen(false);
-      setForm({ patient: '', doctor: '', items: [] });
+      setForm({ patient: '', department: '', doctor: '', items: [] });
       load();
     } catch (error) {
       setErr(error.response?.data?.message || 'Failed to save prescription');
@@ -119,22 +123,23 @@ export default function Prescriptions() {
               <div className="p-4 md:px-5 overflow-y-auto flex flex-col gap-4">
                 {err && <div className="p-3 bg-red-50 text-red-700 rounded-md border border-red-200 text-[14px]">{err}</div>}
                 
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex flex-col gap-1.5 flex-1">
-                    <label className="text-[13px] font-semibold text-slate-500">Patient *</label>
-                    <select className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none" required value={form.patient} onChange={(e) => setForm({ ...form, patient: e.target.value })}>
-                      <option value="">Select patient...</option>
-                      {patients.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.patientId})</option>)}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1.5 flex-1">
-                    <label className="text-[13px] font-semibold text-slate-500">Doctor *</label>
-                    <select className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none" required value={form.doctor} onChange={(e) => setForm({ ...form, doctor: e.target.value })}>
-                      <option value="">Select doctor...</option>
-                      {doctors.map((d) => <option key={d._id} value={d._id}>Dr. {d.user?.name}</option>)}
-                    </select>
-                  </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-slate-500">Patient *</label>
+                  <select className="p-2.5 px-3 border border-border rounded-md text-[15px] bg-white focus:ring-2 focus:ring-accent outline-none" required value={form.patient} onChange={(e) => setForm({ ...form, patient: e.target.value })}>
+                    <option value="">Select patient...</option>
+                    {patients.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.patientId})</option>)}
+                  </select>
                 </div>
+
+                <DepartmentDoctorSelect
+                  departments={departments}
+                  doctors={doctors}
+                  department={form.department}
+                  doctor={form.doctor}
+                  onDepartmentChange={(v) => setForm({ ...form, department: v, doctor: '' })}
+                  onDoctorChange={(v) => setForm({ ...form, doctor: v })}
+                  required
+                />
 
                 <div className="h-px bg-border my-2"></div>
 

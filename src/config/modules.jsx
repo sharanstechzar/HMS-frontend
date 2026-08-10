@@ -3,8 +3,9 @@ import {
   BedDouble, Siren, FileHeart, Pill, FlaskConical, ScanLine, HeartPulse,
   BedSingle, Receipt, ShieldCheck, Scissors, Droplet, Truck, UserCog,
   Boxes, Wallet, BarChart3, BellRing, FolderOpen, Settings as SettingsIcon,
-  Activity, Tent, Droplets
+  Activity, Tent, Droplets, KeyRound
 } from 'lucide-react';
+import DoctorCountBadge from '../components/common/DoctorCountBadge';
 
 // Role groups mirrored from backend/src/config/roleGroups.js
 export const ADMIN = ['super_admin', 'hospital_admin'];
@@ -25,7 +26,7 @@ export const ROLES = EVERYONE;
 export const MODULES = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/', roles: EVERYONE },
 
-  { key: 'patients', label: 'Patients', icon: Users, path: '/patients', endpoint: '/patients', roles: ALL_STAFF,
+  { key: 'patients', label: 'Patients', icon: Users, path: '/patients', endpoint: '/patients', roles: ALL_STAFF, special: true,
     fields: [
       { name: 'name', label: 'Full Name', type: 'text', required: true },
       { name: 'gender', label: 'Gender', type: 'select', options: ['male', 'female', 'other'], required: true },
@@ -40,33 +41,70 @@ export const MODULES = [
 
   { key: 'doctors', label: 'Doctors', icon: Stethoscope, path: '/doctors', endpoint: '/doctors', roles: ALL_STAFF,
     fields: [
-      { name: 'user', label: 'User Account', type: 'reference', refEndpoint: '/users', refLabel: 'name', required: true },
+      // Only staff with the "doctor" role can be linked here - a User can only ever
+      // be linked to one Doctor profile (schema-enforced), so this just narrows the
+      // list to relevant candidates; picking one already linked still correctly errors.
+      { name: 'user', label: 'User Account', type: 'reference', refEndpoint: '/users', refParams: { role: 'doctor', limit: 200 }, refLabel: 'name', required: true },
       { name: 'department', label: 'Department', type: 'reference', refEndpoint: '/departments', refLabel: 'name', required: true },
       { name: 'qualification', label: 'Qualification', type: 'text', required: true },
       { name: 'specialization', label: 'Specialization', type: 'text', required: true },
       { name: 'experienceYears', label: 'Experience (years)', type: 'number' },
       { name: 'consultationFee', label: 'Consultation Fee', type: 'number' },
-      { name: 'onLeave', label: 'On Leave', type: 'checkbox' },
+      { name: 'availableDays', label: 'Available Days', type: 'checkboxGroup', options: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
+      { name: 'availableFrom', label: 'Available From', type: 'time' },
+      { name: 'availableTo', label: 'Available To', type: 'time' },
+      { name: 'onLeave', label: 'Currently On Leave', type: 'checkbox' },
+      { name: 'leaves', label: 'Leave Records', type: 'array', itemFields: [
+        { name: 'fromDate', label: 'From', type: 'date' },
+        { name: 'toDate', label: 'To', type: 'date' },
+        { name: 'reason', label: 'Reason', type: 'text' },
+      ] },
     ],
-    columns: ['specialization', 'qualification', 'experienceYears', 'consultationFee', 'onLeave'],
+    columns: [
+      { key: 'user', label: 'Doctor', render: (row) => <span className="font-medium text-slate-800">Dr. {row.user?.name || '—'}</span> },
+      { key: 'department', label: 'Department' },
+      { key: 'specialization', label: 'Specialization' },
+      { key: 'experienceYears', label: 'Experience' },
+      { key: 'consultationFee', label: 'Fee' },
+      { key: 'contact', label: 'Contact', render: (row) => (
+        <span className="flex flex-col text-[13px]">
+          <span>{row.user?.email || '—'}</span>
+          {row.user?.phone && <span className="text-slate-500">{row.user.phone}</span>}
+        </span>
+      ) },
+      { key: 'onLeave', label: 'Status', render: (row) => (
+        <span className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${row.onLeave ? 'text-amber-600' : 'text-success'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${row.onLeave ? 'bg-amber-500' : 'bg-success'}`} />
+          {row.onLeave ? 'On Leave' : 'Active'}
+        </span>
+      ) },
+    ],
     writeRoles: ADMIN,
   },
 
   { key: 'departments', label: 'Departments', icon: Building2, path: '/departments', endpoint: '/departments', roles: ALL_STAFF,
     fields: [
       { name: 'name', label: 'Department Name', type: 'text', required: true },
+      { name: 'headOfDepartment', label: 'Head of Department', type: 'reference', refEndpoint: '/users', refParams: { role: 'doctor', limit: 200 }, refLabel: 'name' },
       { name: 'description', label: 'Description', type: 'textarea' },
     ],
-    columns: ['name', 'description'],
+    columns: [
+      { key: 'name', label: 'Department' },
+      { key: 'headOfDepartment', label: 'Head of Department' },
+      { key: 'doctorCount', label: 'Doctors', render: (row) => (
+        <DoctorCountBadge departmentId={row._id} departmentName={row.name} count={row.doctorCount} />
+      ) },
+      { key: 'description', label: 'Description' },
+    ],
     writeRoles: ADMIN,
   },
 
   { key: 'appointments', label: 'Appointments', icon: CalendarClock, path: '/appointments', endpoint: '/appointments', roles: ALL_STAFF, special: true },
 
-  { key: 'opd', label: 'OPD', icon: ClipboardList, path: '/opd', endpoint: '/opd-visits', roles: ALL_STAFF,
+  { key: 'opd', label: 'OPD', icon: ClipboardList, path: '/opd', endpoint: '/opd-visits', roles: ALL_STAFF, special: true,
     fields: [
       { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
-      { name: 'doctor', label: 'Doctor', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization', required: true },
+      { name: 'doctor', label: 'Doctor', type: 'doctor', required: true },
       { name: 'symptoms', label: 'Symptoms', type: 'textarea' },
       { name: 'diagnosis', label: 'Diagnosis', type: 'textarea' },
       { name: 'doctorNotes', label: "Doctor's Notes", type: 'textarea' },
@@ -79,13 +117,13 @@ export const MODULES = [
 
   { key: 'ipd', label: 'IPD / Admissions', icon: BedDouble, path: '/ipd', endpoint: '/admissions', roles: ALL_STAFF, special: true },
 
-  { key: 'emergency', label: 'Emergency', icon: Siren, path: '/emergency', endpoint: '/emergency', roles: ALL_STAFF,
+  { key: 'emergency', label: 'Emergency', icon: Siren, path: '/emergency', endpoint: '/emergency', roles: ALL_STAFF, special: true,
     fields: [
       { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
       { name: 'triageLevel', label: 'Triage Level', type: 'select', options: ['critical', 'urgent', 'stable'], required: true },
       { name: 'arrivalMode', label: 'Arrival Mode', type: 'select', options: ['ambulance', 'walk_in', 'referred'] },
       { name: 'ambulance', label: 'Ambulance', type: 'reference', refEndpoint: '/ambulances', refLabel: 'vehicleNumber' },
-      { name: 'attendingDoctor', label: 'Attending Doctor', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization' },
+      { name: 'attendingDoctor', label: 'Attending Doctor', type: 'doctor' },
       { name: 'immediateTreatment', label: 'Immediate Treatment', type: 'textarea' },
       { name: 'status', label: 'Status', type: 'select', options: ['in_treatment', 'stabilized', 'admitted', 'discharged', 'deceased'] },
     ],
@@ -97,10 +135,10 @@ export const MODULES = [
 
   { key: 'pharmacy', label: 'Pharmacy', icon: Pill, path: '/pharmacy', endpoint: '/medicines', roles: ALL_STAFF, special: true },
 
-  { key: 'laboratory', label: 'Laboratory', icon: FlaskConical, path: '/laboratory', endpoint: '/lab-orders', roles: ALL_STAFF,
+  { key: 'laboratory', label: 'Laboratory', icon: FlaskConical, path: '/laboratory', endpoint: '/lab-orders', roles: ALL_STAFF, special: true,
     fields: [
       { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
-      { name: 'doctor', label: 'Doctor', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization' },
+      { name: 'doctor', label: 'Doctor', type: 'doctor' },
       { name: 'test', label: 'Lab Test', type: 'reference', refEndpoint: '/lab-tests', refLabel: 'name', required: true },
       { name: 'result', label: 'Result', type: 'textarea' },
       { name: 'status', label: 'Status', type: 'select', options: ['ordered', 'sample_collected', 'result_ready', 'delivered'] },
@@ -109,10 +147,10 @@ export const MODULES = [
     writeRoles: LAB,
   },
 
-  { key: 'radiology', label: 'Radiology', icon: ScanLine, path: '/radiology', endpoint: '/radiology-orders', roles: ALL_STAFF,
+  { key: 'radiology', label: 'Radiology', icon: ScanLine, path: '/radiology', endpoint: '/radiology-orders', roles: ALL_STAFF, special: true,
     fields: [
       { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
-      { name: 'doctor', label: 'Doctor', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization' },
+      { name: 'doctor', label: 'Doctor', type: 'doctor' },
       { name: 'type', label: 'Scan Type', type: 'select', options: ['X-Ray', 'CT Scan', 'MRI', 'Ultrasound', 'ECG'], required: true },
       { name: 'notes', label: 'Notes', type: 'textarea' },
       { name: 'status', label: 'Status', type: 'select', options: ['ordered', 'in_progress', 'report_ready'] },
@@ -149,10 +187,10 @@ export const MODULES = [
     writeRoles: BILLING,
   },
 
-  { key: 'surgery', label: 'Surgery', icon: Scissors, path: '/surgery', endpoint: '/surgeries', roles: ALL_STAFF,
+  { key: 'surgery', label: 'Surgery', icon: Scissors, path: '/surgery', endpoint: '/surgeries', roles: ALL_STAFF, special: true,
     fields: [
       { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
-      { name: 'surgeon', label: 'Surgeon', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization', required: true },
+      { name: 'surgeon', label: 'Surgeon', type: 'doctor', required: true },
       { name: 'surgeryType', label: 'Surgery Type', type: 'text', required: true },
       { name: 'scheduledDate', label: 'Scheduled Date', type: 'date', required: true },
       { name: 'operationTheatre', label: 'Operation Theatre', type: 'text' },
@@ -239,7 +277,8 @@ export const MODULES = [
   { key: 'blood-requests', label: 'Blood Requests', icon: Droplets, path: '/blood-requests', endpoint: '/blood-requests', roles: CLINICAL,
     fields: [
       { name: 'patient', label: 'Patient', type: 'reference', refEndpoint: '/patients', refLabel: 'name', required: true },
-      { name: 'requestedBy', label: 'Requested By (Doctor)', type: 'reference', refEndpoint: '/doctors', refLabel: 'specialization' },
+      // BloodRequest.requestedBy refs User directly (any clinical staff, per spec), not Doctor - do not use the doctor picker here.
+      { name: 'requestedBy', label: 'Requested By', type: 'reference', refEndpoint: '/users', refLabel: 'name' },
       { name: 'bloodGroup', label: 'Blood Group', type: 'select', options: ['A+','A-','B+','B-','AB+','AB-','O+','O-'], required: true },
       { name: 'units', label: 'Units Needed', type: 'number', required: true },
       { name: 'urgency', label: 'Urgency', type: 'select', options: ['routine', 'urgent', 'emergency'] },
@@ -249,16 +288,11 @@ export const MODULES = [
     writeRoles: CLINICAL,
   },
 
-  { key: 'users', label: 'User Accounts', icon: Users, path: '/users', endpoint: '/users', roles: ADMIN,
-    fields: [
-      { name: 'name', label: 'Name', type: 'text', required: true },
-      { name: 'email', label: 'Email', type: 'text', required: true },
-      { name: 'role', label: 'Role', type: 'select', options: ['super_admin', 'hospital_admin', 'doctor', 'nurse', 'receptionist', 'pharmacist', 'lab_technician', 'radiologist', 'accountant', 'cashier', 'patient'], required: true },
-      { name: 'password', label: 'Password', type: 'text', hint: 'Leave blank to keep existing password' },
-    ],
-    columns: ['name', 'email', 'role'],
-    writeRoles: ADMIN,
-  },
+  // fields/columns live in Users.jsx itself (roles are fetched dynamically
+  // from /api/roles, since super_admin can add custom ones at runtime).
+  { key: 'users', label: 'User Accounts', icon: Users, path: '/users', roles: ADMIN, special: true },
+
+  { key: 'roles', label: 'Roles & Permissions', icon: KeyRound, path: '/roles', roles: ADMIN, special: true },
 
   { key: 'activity-logs', label: 'Activity Logs', icon: Activity, path: '/activity-logs', endpoint: '/activity-logs', roles: ADMIN,
     fields: [], // Typically read-only
