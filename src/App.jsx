@@ -17,6 +17,7 @@ import Settings from './pages/Settings';
 
 // New standalone pages
 import Patients from './pages/Patients';
+import PatientDetail from './pages/PatientDetail';
 import Opd from './pages/Opd';
 import Emergency from './pages/Emergency';
 import Surgery from './pages/Surgery';
@@ -57,6 +58,7 @@ export default function App() {
 
             {/* Newly extracted dedicated pages */}
             <Route path="/patients" element={<Patients />} />
+            <Route path="/patients/:id" element={<PatientDetail />} />
             <Route path="/opd" element={<Opd />} />
             <Route path="/emergency" element={<Emergency />} />
             <Route path="/surgery" element={<Surgery />} />

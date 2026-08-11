@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Users, Plus, Search, FileDown } from 'lucide-react';
 import DataTable from '../components/common/DataTable';
 import FormModal from '../components/common/FormModal';
@@ -30,8 +31,12 @@ export default function Patients() {
   ];
 
   const columns = [
-    { key: 'patientId', label: 'Patient ID' },
-    { key: 'name', label: 'Name' },
+    { key: 'patientId', label: 'Patient ID', render: (row) => (
+      <Link to={`/patients/${row._id}`} className="text-primary font-medium hover:underline">{row.patientId}</Link>
+    ) },
+    { key: 'name', label: 'Name', render: (row) => (
+      <Link to={`/patients/${row._id}`} className="text-slate-800 font-medium hover:text-primary hover:underline">{row.name}</Link>
+    ) },
     { key: 'gender', label: 'Gender' },
     { key: 'phone', label: 'Phone' },
     { key: 'bloodGroup', label: 'Blood Group' },
